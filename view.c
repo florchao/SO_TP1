@@ -8,7 +8,7 @@ int main(int argc, char const *argv[])
     char auxBuffer[BUFF_SIZE] = {'\0'};
     char shm_name[SIZE] = {'\0'};
     char sem_name[SIZE] = {'\0'};
-
+ 
     //-------------------OBTENER INFO PARA ABRIR SHMEM-----------------------------
     if (argc == 4)
     {
