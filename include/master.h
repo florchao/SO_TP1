@@ -11,6 +11,7 @@
 #define EXT ".cnf"
 void create_pipes(int fd_read[SLAVES][2], int fd_write[SLAVES][2]);
 void close_pipes(int fd_read[SLAVES][2], int fd_write[SLAVES][2]);
-void create_slaves();
+void create_slaves(int fd_read[SLAVES][2], int fd_write[SLAVES][2]);
 void check_files(int cant_files, char const * files[]);
+void nclose_pipes(int fd_read[SLAVES][2], int fd_write[SLAVES][2], int n);
 
