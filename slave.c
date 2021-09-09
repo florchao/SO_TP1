@@ -2,7 +2,6 @@
 
 int main()
 {
-
     char buffer[BUFFER_SIZE] = {'\0'};
     char command[BUFFER_SIZE] = {'\0'};
     char result[BUFFER_SIZE] = {'\0'};
@@ -14,7 +13,7 @@ int main()
         {
             printf("PID: %d - ", getpid());
             perror("Error en el read");
-            abort();
+            exit(1);
         }
 
         buffer[i - 1] = '\0';
@@ -22,7 +21,7 @@ int main()
         {
             printf("PID: %d - ", getpid());
             perror("Error en el sprintf");
-            abort();
+            exit(1);
         }
 
         FILE *stream = popen((const char *)command, "r");
@@ -30,13 +29,14 @@ int main()
         {
             printf("PID: %d - ", getpid());
             perror("Error en esclavo al querer abrir el pipe");
-            abort();
+            exit(1);
         }
 
-        if( fgets(result, BUFFER_SIZE, stream) == NULL ) {
+        if (fgets(result, BUFFER_SIZE, stream) == NULL)
+        {
             printf("PID: %d - ", getpid());
             perror("Error en fgets");
-            abort();
+            exit(1);
         }
 
         int ret = pclose(stream);
@@ -44,12 +44,13 @@ int main()
         {
             printf("PID: %d - ", getpid());
             perror("Error en esclavo al querer cerrar el pipe");
-            abort();
+            exit(1);
         }
 
         printf("Nombre: %s\nEsclavo PID: %d\n%s\n", buffer, getpid(), result);
         cleanBuffer(buffer);
     }
+    return 0;
 }
 
 void cleanBuffer(char *buffer)
