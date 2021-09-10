@@ -13,32 +13,52 @@ int main(int argc, const char *argv[])
     int fd_read[slaves][2];
     int fd_write[slaves][2];
     int slaves_pid[slaves];
-    char fd_flag[slaves];
-    int j = 0;
-    for(;j<slaves;j++)
-    {
-        fd_flag[j] = 0;
-    }
-    
+
     create_pipes(fd_read, fd_write);
     create_slaves(fd_read, fd_write, slaves_pid);
     sem_t * sem = create_sem();
     char * shm_ptr;
     int shm = create_shm(shm_ptr);
+    shm_ptr = mmap(NULL, BUFFER_SIZE * (argc-1), PROT_WRITE, MAP_SHARED, shm, 0);
+    if(shm_ptr == MAP_FAILED)
+    {
+        perror("Error al mapear la shm");
+        exit(1);
+    }
+    
+    printf("%d\n", argc-1);
+    fflush(stdout);
+    
     sleep(2);
     FILE * result = create_result();
     
     int filesToSend = argc - 1;
     int filesFetched = 0;
     fd_set fd_slaves_set;
-    int max = 0, tIndex = 0;
+    int max = 0, tIndex = 1;
     char buffer[BUFFER_SIZE] = {'\0'};
     char task[BUFFER_SIZE] = {'\0'};
 
+    int i;
+    for(i=0; i < slaves; i++)
+    {
+        if(filesToSend > 0)
+        {
+            strcpy(task, argv[tIndex++]);
+            strcat(task, "\n");
+            if( write(fd_write[i][STDOUT_FILENO], task, strlen(task)) < 0 )
+            {
+                perror("Error al enviar la tarea");
+                exit(1);
+            }
+            cleanBuffer(task);
+            filesToSend--;
+        }
+    }
+
     while (filesFetched < argc - 1)
     { 
-        select_preparation(&fd_slaves_set, &max, fd_read);
-
+        max = select_preparation(&fd_slaves_set, fd_read);
         int okay = select(max, &fd_slaves_set, NULL, NULL, NULL);
         if (okay < 0)
         {
@@ -52,32 +72,33 @@ int main(int argc, const char *argv[])
             {
                 if (FD_ISSET(fd_read[i][STDIN_FILENO], &fd_slaves_set))
                 {
-                    if(fd_flag[i])  // lectura del esclavo (siempre menos la primera vez)
+                    int n;
+                    if( (n = read(fd_read[i][STDIN_FILENO], buffer, sizeof(buffer))) < 0 ) 
                     {
-                        int n;
-                        if(read(fd_read[i][STDIN_FILENO], buffer, sizeof(buffer) < 0))
-                        {
-                            perror("Error al leer el resultado del esclavo");
-                            exit(1);
-                        }
-                        if( n != fwrite(buffer,sizeof(char),n,result) ) 
-                        {
-                            perror("Error al escribir en el archivo resultado");
-                            exit(1);
-                        }
-
-                        memcpy(shm_ptr,buffer, sizeof(buffer));
-                        if(sem_post(sem) < 0) 
-                        {
-                            perror("Error en el post del semaforo");
-                            exit(1);
-                        }
-                        filesFetched++;
-                        cleanBuffer(buffer);
+                        perror("Error al leer el resultado del esclavo");
+                        exit(1);
                     }
+                    if( n != fwrite(buffer,sizeof(char),n,result) ) 
+                    {
+                        perror("Error al escribir en el archivo resultado");
+                        exit(1);
+                    }
+                    fflush(result);
+                    
+                    int size = strlen(buffer);
+                    memcpy(shm_ptr,buffer, size);
+                    shm_ptr += size;
+
+                    if(sem_post(sem) < 0) 
+                    {
+                        perror("Error en el post del semaforo");
+                        exit(1);
+                    }
+                    filesFetched++;
+                    cleanBuffer(buffer);
+                
                     if(filesToSend > 0)
                     {
-                        fd_flag[i] = 1;
                         strcpy(task, argv[tIndex++]);
                         strcat(task, "\n");
                         if( write(fd_write[i][STDOUT_FILENO], task, strlen(task)) < 0 )
@@ -94,12 +115,25 @@ int main(int argc, const char *argv[])
     }
    
     close(shm);
+    munmap(shm_ptr,SHM_SIZE);
+     if (shm_unlink(SHM_NAME) < 0)
+    {
+        perror("Error al hacer el unlink de la shm");
+        exit(1);    
+    }
+
+    if (sem_close(sem) < 0 || sem_unlink(SEM_NAME) < 0)
+    {
+        perror("Eror al cerrar o unlink el semaforo");
+        exit(1);
+    }
+
     close_pipes(fd_read, fd_write);
     fclose(result);
-
-    for(int i = 0; i < slaves; i++) 
+    int k;
+    for(k = 0; k < slaves; k++) 
     {
-        waitpid(slaves_pid[i], NULL, 0);
+        waitpid(slaves_pid[k], NULL, 0);
     }
 
     return 0;
@@ -235,14 +269,6 @@ int create_shm(char * ptr)
         perror("Error al modificar el tamaño de la shm");
         exit(1);
     }
-
-    ptr = mmap(NULL, SHM_SIZE, PROT_WRITE, MAP_SHARED, fd, 0);
-    if(ptr == MAP_FAILED)
-    {
-        perror("Error al mapear la shm");
-        exit(1);
-    }
-
     return fd;
 }
 
@@ -258,20 +284,21 @@ FILE * create_result()
     return file;
 }
 
-void select_preparation(fd_set * fd_slaves_set, int * max, int fd_read[SLAVES][2])
+int select_preparation(fd_set * fd_slaves_set, int fd_read[SLAVES][2])
 {
     FD_ZERO(fd_slaves_set);
-    *max = 0;
+    int max = 0;
 
     int i = 0;
     for (; i < slaves ; i++)
     {
         FD_SET(fd_read[i][STDIN_FILENO], fd_slaves_set); 
-        if (fd_read[i][STDIN_FILENO] > *max)
+        if (fd_read[i][STDIN_FILENO] >max)
         {
-            *max = fd_read[i][STDIN_FILENO] + 1;
+            max = fd_read[i][STDIN_FILENO] + 1;
         }
     }
+    return max;
 }
 
 void cleanBuffer(char *buffer)

@@ -59,7 +59,8 @@ int main()
                     exit(1);
                 }
 
-                printf("Nombre: %s\nEsclavo PID: %d\n%s\n", bufferAux, getpid(), result);
+                printf("Nombre: %s Esclavo PID: %d %s", bufferAux, getpid(), result);
+                fflush(stdout);
                 cleanBuffer(bufferAux);
                 cleanBuffer(command);
                 idx2 = 0;

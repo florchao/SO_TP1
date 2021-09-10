@@ -32,6 +32,6 @@ int create_shm(char * ptr);
 
 FILE * create_result();
 
-void select_preparation(fd_set * fd_slaves_set, int * max, int fd_read[SLAVES][2]);
+int select_preparation(fd_set * fd_slaves_set, int fd_read[SLAVES][2]);
 
 void cleanBuffer(char *buffer);

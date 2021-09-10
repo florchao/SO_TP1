@@ -6,20 +6,17 @@ int main(int argc, char const *argv[])
     char *ptr;
     struct stat shmobj_st;
     char auxBuffer[BUFF_SIZE] = {'\0'};
-    char shm_name[SIZE] = {'\0'};
-    char sem_name[SIZE] = {'\0'};
+    char aux_files[10];
 
     //-------------------OBTENER INFO PARA ABRIR SHMEM-----------------------------
-    if (argc == 4)
+    if (argc == 2)
     {
-        if (argv[1] == NULL || argv[2] == NULL)
+        if (argv[1] == NULL)
         {
-            perror("Argumentos null");
+            perror("Argumento null");
             exit(1);
         }
-        strcpy(shm_name, argv[1]);
-        strcpy(sem_name, argv[2]);
-        files = atoi(argv[3]);
+        files = atoi(argv[1]);
     }
     else if (argc == 1)
     {
@@ -28,13 +25,7 @@ int main(int argc, char const *argv[])
             perror("error en read");
             exit(1);
         }
-        char *token;
-        token = strtok(auxBuffer, "-");
-        strcpy(shm_name, token);
-        token = strtok(NULL, "-");
-        strcpy(sem_name, token);
-        token = strtok(NULL, "-");
-        files = atoi(token);
+        files = atoi(auxBuffer);
     }
     else
     {
@@ -42,11 +33,9 @@ int main(int argc, char const *argv[])
         exit(1);
     }
 
-    printf("%s, %s, %d\n", shm_name, sem_name, files); // DEBUG
-
     //----------------------------------------------------------------------------
 
-    fd = shm_open(shm_name, O_RDONLY, 00400);
+    fd = shm_open(SHM_NAME, O_RDONLY, 00400);
     if (fd == -1)
     {
         printf("Error, la shm no existe\n");
@@ -66,8 +55,8 @@ int main(int argc, char const *argv[])
         exit(1);
     }
 
-    sem_t *my_semaphore = sem_open(sem_name, 0);
-    if (my_semaphore == SEM_FAILED)
+    sem_t * sem = sem_open(SEM_NAME, 0);
+    if (sem == SEM_FAILED)
     {
         printf("Error, el semaforo no existe\n");
         exit(1);
@@ -77,12 +66,12 @@ int main(int argc, char const *argv[])
 
     while (files)
     {
-        sem_wait(my_semaphore);
-        offset += printf("%s \n", ptr + offset);
+        sem_wait(sem);
+        offset += printf("%s", ptr + offset);
         files--;
     }
 
-    if (sem_close(my_semaphore) < 0)
+    if (sem_close(sem) < 0)
     {
         perror("Error al cerrar el semaforo");
         exit(1);
