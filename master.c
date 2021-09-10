@@ -13,21 +13,20 @@ int main(int argc, const char *argv[])
     int fd_write[slaves][2];
     create_pipes(fd_read, fd_write);
     create_slaves(fd_read, fd_write);
-    sem_t *sem = create_sem();
-    int shm = create_shm();
-    FILE *result = create_result();
+    sem_t * sem = create_sem();
+    char * shm_ptr;
+    int shm = create_shm(shm_ptr);
+    sleep(2);
+    FILE * result = create_result();
 
-    /*
-    /////////////////
     int files = argc - 1;
     while (files)
     {
        // select
     }
+   
 
-    */
-    //sleep(30);
-
+    close(shm);
     close_pipes(fd_read, fd_write);
 
     return 0;
@@ -149,8 +148,9 @@ sem_t create_sem()
     return sem;
 }
 
-/* codigo de https://github.com/WhileTrueThenDream/ExamplesCLinuxUserSpace/blob/master/sm_create.c*/
-int createSHM()
+/* codigo de https://github.com/WhileTrueThenDream/ExamplesCLinuxUserSpace/blob/master/sm_create.c 
+             https://github.com/WhileTrueThenDream/ExamplesCLinuxUserSpace/blob/master/sm_write.c  */
+int create_shm(char * ptr)
 {
     int fd;
     fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 00700);
@@ -159,16 +159,23 @@ int createSHM()
         perror("Error al crear la shm");
         exit(1);
     }
-    if (-1 == ftruncate(fd, SIZEOF_SMOBJ))
+    if (-1 == ftruncate(fd, SHM_SIZE))
     {
         perror("Error al modificar el tamaño de la shm");
+        exit(1);
+    }
+
+    ptr = mmap(NULL, sizeof(buf), PROT_WRITE, MAP_SHARED, shm, 0);
+    if(ptr == MAP_FAILED)
+    {
+        perror("Error al mapear la shm");
         exit(1);
     }
 
     return fd;
 }
 
-FILE *create_result()
+FILE * create_result()
 {
     FILE *file;
     file = fopen(FILE_NAME, S_IWRITE | S_IROTH);
