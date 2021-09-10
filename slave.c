@@ -3,7 +3,7 @@
 int main()
 {
     char buffer[BUFFER_SIZE] = {'\0'};
-    char command[BUFFER_SIZE] = {'\0'};
+    char command[BUFFER_SIZE*2] = {'\0'};
     char result[BUFFER_SIZE] = {'\0'};
     int i;
 
@@ -29,7 +29,7 @@ int main()
                 }
 
                 bufferAux[idx2] = '\0';
-                if (sprintf(command, " %s %s | %s", MINISAT, bufferAux, GREP) < 0)
+                if (sprintf(command, "%s %s | %s", MINISAT, bufferAux, GREP) < 0)
                 {
                     printf("PID: %d - ", getpid());
                     perror("Error en el sprintf");

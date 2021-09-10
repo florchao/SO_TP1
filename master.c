@@ -1,6 +1,7 @@
 #include "./include/master.h"
 
 int slaves = SLAVES;
+
 int main(int argc, const char *argv[])
 {
     check_files(argc, argv);
@@ -11,23 +12,95 @@ int main(int argc, const char *argv[])
 
     int fd_read[slaves][2];
     int fd_write[slaves][2];
+    int slaves_pid[slaves];
+    char fd_flag[slaves];
+    int j = 0;
+    for(;j<slaves;j++)
+    {
+        fd_flag[j] = 0;
+    }
+    
     create_pipes(fd_read, fd_write);
-    create_slaves(fd_read, fd_write);
+    create_slaves(fd_read, fd_write, slaves_pid);
     sem_t * sem = create_sem();
     char * shm_ptr;
     int shm = create_shm(shm_ptr);
     sleep(2);
     FILE * result = create_result();
+    
+    int filesToSend = argc - 1;
+    int filesFetched = 0;
+    fd_set fd_slaves_set;
+    int max = 0, tIndex = 0;
+    char buffer[BUFFER_SIZE] = {'\0'};
+    char task[BUFFER_SIZE] = {'\0'};
 
-    int files = argc - 1;
-    while (files)
-    {
-       // select
+    while (filesFetched < argc - 1)
+    { 
+        select_preparation(&fd_slaves_set, &max, fd_read);
+
+        int okay = select(max, &fd_slaves_set, NULL, NULL, NULL);
+        if (okay < 0)
+        {
+            perror("Error en la syscall select");
+            exit(1);
+        }
+        else if(okay)
+        {
+            int i;
+            for (i = 0; i < slaves; i++)
+            {
+                if (FD_ISSET(fd_read[i][STDIN_FILENO], &fd_slaves_set))
+                {
+                    if(fd_flag[i])  // lectura del esclavo (siempre menos la primera vez)
+                    {
+                        int n;
+                        if(read(fd_read[i][STDIN_FILENO], buffer, sizeof(buffer) < 0))
+                        {
+                            perror("Error al leer el resultado del esclavo");
+                            exit(1);
+                        }
+                        if( n != fwrite(buffer,sizeof(char),n,result) ) 
+                        {
+                            perror("Error al escribir en el archivo resultado");
+                            exit(1);
+                        }
+
+                        memcpy(shm_ptr,buffer, sizeof(buffer));
+                        if(sem_post(sem) < 0) 
+                        {
+                            perror("Error en el post del semaforo");
+                            exit(1);
+                        }
+                        filesFetched++;
+                        cleanBuffer(buffer);
+                    }
+                    if(filesToSend > 0)
+                    {
+                        fd_flag[i] = 1;
+                        strcpy(task, argv[tIndex++]);
+                        strcat(task, "\n");
+                        if( write(fd_write[i][STDOUT_FILENO], task, strlen(task)) < 0 )
+                        {
+                            perror("Error al enviar la tarea");
+                            exit(1);
+                        }
+                        cleanBuffer(task);
+                        filesToSend--;
+                    }
+                }
+            }
+        }
     }
    
-
     close(shm);
     close_pipes(fd_read, fd_write);
+    fclose(result);
+
+    for(int i = 0; i < slaves; i++) 
+    {
+        waitpid(slaves_pid[i], NULL, 0);
+    }
 
     return 0;
 }
@@ -96,15 +169,13 @@ void close_pipes(int fd_read[SLAVES][2], int fd_write[SLAVES][2])
     nclose_pipes(fd_read, fd_write, -1);
 }
 
-void create_slaves(int fd_read[SLAVES][2], int fd_write[SLAVES][2])
+void create_slaves(int fd_read[SLAVES][2], int fd_write[SLAVES][2], int * slaves_pid)
 {
     /* basado en https://github.com/mit-pdos/xv6-riscv/blob/riscv/user/sh.c */
-
     int i;
     for (i = 0; i < slaves; i++)
     {
-        int pid;
-        if ((pid = fork()) == 0)
+        if ((slaves_pid[i] = fork()) == 0)
         {
             nclose_pipes(fd_read, fd_write, i);
             close(fd_write[i][STDOUT_FILENO]);
@@ -129,7 +200,7 @@ void create_slaves(int fd_read[SLAVES][2], int fd_write[SLAVES][2])
                 exit(1);
             }
         }
-        else if (pid < 0)
+        else if (slaves_pid[i] < 0)
         {
             perror("Error al realizar fork");
             exit(1);
@@ -137,9 +208,9 @@ void create_slaves(int fd_read[SLAVES][2], int fd_write[SLAVES][2])
     }
 }
 
-sem_t create_sem()
+sem_t * create_sem()
 {
-    sem_t *sem = sem_open(SEM_NAME, O_CREAT, S_IRUSR | S_IWUSR, 0);
+    sem_t * sem = sem_open(SEM_NAME, O_CREAT, S_IRUSR | S_IWUSR, 0);
     if (sem == SEM_FAILED)
     {
         perror("Error al crear el semaforo");
@@ -165,7 +236,7 @@ int create_shm(char * ptr)
         exit(1);
     }
 
-    ptr = mmap(NULL, sizeof(buf), PROT_WRITE, MAP_SHARED, shm, 0);
+    ptr = mmap(NULL, SHM_SIZE, PROT_WRITE, MAP_SHARED, fd, 0);
     if(ptr == MAP_FAILED)
     {
         perror("Error al mapear la shm");
@@ -178,11 +249,36 @@ int create_shm(char * ptr)
 FILE * create_result()
 {
     FILE *file;
-    file = fopen(FILE_NAME, S_IWRITE | S_IROTH);
+    file = fopen(FILE_NAME, "w+");
     if (file == NULL)
     {
         perror("Error al crear el archivo");
         exit(1);
     }
     return file;
+}
+
+void select_preparation(fd_set * fd_slaves_set, int * max, int fd_read[SLAVES][2])
+{
+    FD_ZERO(fd_slaves_set);
+    *max = 0;
+
+    int i = 0;
+    for (; i < slaves ; i++)
+    {
+        FD_SET(fd_read[i][STDIN_FILENO], fd_slaves_set); 
+        if (fd_read[i][STDIN_FILENO] > *max)
+        {
+            *max = fd_read[i][STDIN_FILENO] + 1;
+        }
+    }
+}
+
+void cleanBuffer(char *buffer)
+{
+    int j = 0;
+    while (buffer[j])
+    {
+        buffer[j++] = 0;
+    }
 }
