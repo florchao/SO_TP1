@@ -28,7 +28,7 @@ void create_slaves(int fd_read[SLAVES][2], int fd_write[SLAVES][2], int * slaves
 
 sem_t * create_sem();
 
-int create_shm(char * ptr);
+int create_shm();
 
 FILE * create_result();
 

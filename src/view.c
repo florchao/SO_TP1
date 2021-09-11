@@ -1,4 +1,4 @@
-#include "./include/view.h"
+#include "../include/view.h"
 
 int main(int argc, char const *argv[])
 {
@@ -6,7 +6,6 @@ int main(int argc, char const *argv[])
     char *ptr;
     struct stat shmobj_st;
     char auxBuffer[BUFF_SIZE] = {'\0'};
-    char aux_files[10];
 
     //-------------------OBTENER INFO PARA ABRIR SHMEM-----------------------------
     if (argc == 2)

@@ -1,4 +1,4 @@
-#include "./include/slave.h"
+#include "../include/slave.h"
 
 int main()
 {
