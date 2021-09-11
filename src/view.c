@@ -37,27 +37,27 @@ int main(int argc, char const *argv[])
     fd = shm_open(SHM_NAME, O_RDONLY, 00400);
     if (fd == -1)
     {
-        printf("Error, la shm no existe\n");
+        perror("Error, la shm no existe");
         exit(1);
     }
 
     if (fstat(fd, &shmobj_st) == -1)
     {
-        printf("Error en fstat\n");
+        perror("Error en fstat");
         exit(1);
     }
     ptr = mmap(NULL, shmobj_st.st_size, PROT_READ, MAP_SHARED, fd, 0);
 
     if (ptr == MAP_FAILED)
     {
-        printf("Error en el mapeo de memoria\n");
+        perror("Error en el mapeo de memoria");
         exit(1);
     }
 
     sem_t * sem = sem_open(SEM_NAME, 0);
     if (sem == SEM_FAILED)
     {
-        printf("Error, el semaforo no existe\n");
+        perror("Error, el semaforo no existe\n");
         exit(1);
     }
 

@@ -18,7 +18,7 @@ int main(int argc, const char *argv[])
     create_slaves(fd_read, fd_write, slaves_pid);
     sem_t *sem = create_sem();
     int shm = create_shm();
-    char *shm_ptr = mmap(NULL, BUFFER_SIZE * (argc - 1), PROT_WRITE, MAP_SHARED, shm, 0);
+    char * shm_ptr = mmap(NULL, BUFFER_SIZE * (argc - 1), PROT_WRITE, MAP_SHARED, shm, 0);
     if (shm_ptr == MAP_FAILED)
     {
         perror("Error al mapear la shm");
@@ -84,6 +84,7 @@ int main(int argc, const char *argv[])
                     }
                     fflush(result);
 
+                    // aca vamos a poner shm_ptr += write_shm(shm_ptr, buffer);
                     int size = strlen(buffer);
                     memcpy(shm_ptr, buffer, size);
                     shm_ptr += size;
@@ -114,7 +115,7 @@ int main(int argc, const char *argv[])
     }
 
     close(shm);
-    munmap(shm_ptr, SHM_SIZE);
+    munmap(shm_ptr, SHM_SIZE); //////////////////////// ACA PUEDE HABER UN PROBLEMA, FUIMOS CAMBIANDO SHM_PTR
     if (shm_unlink(SHM_NAME) < 0)
     {
         perror("Error al hacer el unlink de la shm");

@@ -12,7 +12,7 @@
 #define EXT ".cnf"
 #define SEM_NAME "sem"
 #define SHM_NAME "shm"
-#define FILE_NAME "result"
+#define FILE_NAME "../result"
 #define SHM_SIZE 512
 #define BUFFER_SIZE 256
 
