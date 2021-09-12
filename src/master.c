@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "../include/master.h"
 
 int slaves = SLAVES;
@@ -16,14 +18,9 @@ int main(int argc, const char *argv[])
 
     create_pipes(fd_read, fd_write);
     create_slaves(fd_read, fd_write, slaves_pid);
-    sem_t *sem = create_sem();
+    sem_t * sem = create_sem();
     int shm = create_shm();
-    char * shm_ptr = mmap(NULL, BUFFER_SIZE * (argc - 1), PROT_WRITE, MAP_SHARED, shm, 0);
-    if (shm_ptr == MAP_FAILED)
-    {
-        perror("Error al mapear la shm");
-        exit(1);
-    }
+    char * shm_ptr = mmap_shm(shm);
 
     printf("%d\n", argc - 1);
     fflush(stdout);
@@ -34,25 +31,13 @@ int main(int argc, const char *argv[])
     int filesToSend = argc - 1;
     int filesFetched = 0;
     fd_set fd_slaves_set;
-    int max = 0, tIndex = 1;
+    int max = 0, tIndex = 1, offset = 0;
     char buffer[BUFFER_SIZE] = {'\0'};
-    char task[BUFFER_SIZE] = {'\0'};
 
     int i;
     for (i = 0; i < slaves; i++)
     {
-        if (filesToSend > 0)
-        {
-            strcpy(task, argv[tIndex++]);
-            strcat(task, "\n");
-            if (write(fd_write[i][STDOUT_FILENO], task, strlen(task)) < 0)
-            {
-                perror("Error al enviar la tarea");
-                exit(1);
-            }
-            cleanBuffer(task);
-            filesToSend--;
-        }
+        if(sendTasks(filesToSend, i, argv, tIndex, fd_write)) {tIndex++; filesToSend--;}
     }
 
     while (filesFetched < argc - 1)
@@ -84,52 +69,24 @@ int main(int argc, const char *argv[])
                     }
                     fflush(result);
 
-                    // aca vamos a poner shm_ptr += write_shm(shm_ptr, buffer);
-                    int size = strlen(buffer);
-                    memcpy(shm_ptr, buffer, size);
-                    shm_ptr += size;
+                    offset += write_shm(shm_ptr + offset, buffer);
 
-                    if (sem_post(sem) < 0)
-                    {
-                        perror("Error en el post del semaforo");
-                        exit(1);
-                    }
+                    post_sem(sem);
                     filesFetched++;
                     cleanBuffer(buffer);
-
-                    if (filesToSend > 0)
-                    {
-                        strcpy(task, argv[tIndex++]);
-                        strcat(task, "\n");
-                        if (write(fd_write[i][STDOUT_FILENO], task, strlen(task)) < 0)
-                        {
-                            perror("Error al enviar la tarea");
-                            exit(1);
-                        }
-                        cleanBuffer(task);
-                        filesToSend--;
-                    }
+                    if(sendTasks(filesToSend, i, argv, tIndex, fd_write)) {tIndex++; filesToSend--;}
                 }
             }
         }
     }
 
-    close(shm);
-    munmap(shm_ptr, SHM_SIZE); //////////////////////// ACA PUEDE HABER UN PROBLEMA, FUIMOS CAMBIANDO SHM_PTR
-    if (shm_unlink(SHM_NAME) < 0)
-    {
-        perror("Error al hacer el unlink de la shm");
-        exit(1);
-    }
-
-    if (sem_close(sem) < 0 || sem_unlink(SEM_NAME) < 0)
-    {
-        perror("Eror al cerrar o unlink el semaforo");
-        exit(1);
-    }
-
+    close_shm(shm, shm_ptr);
+    unlink_shm();
+    close_sem(sem);
+    unlink_sem(sem);
     close_pipes(fd_read, fd_write);
     fclose(result);
+    
     int k;
     for (k = 0; k < slaves; k++)
     {
@@ -242,36 +199,6 @@ void create_slaves(int fd_read[SLAVES][2], int fd_write[SLAVES][2], int *slaves_
     }
 }
 
-sem_t *create_sem()
-{
-    sem_t *sem = sem_open(SEM_NAME, O_CREAT, S_IRUSR | S_IWUSR, 0);
-    if (sem == SEM_FAILED)
-    {
-        perror("Error al crear el semaforo");
-        exit(1);
-    }
-    return sem;
-}
-
-/* codigo de https://github.com/WhileTrueThenDream/ExamplesCLinuxUserSpace/blob/master/sm_create.c 
-             https://github.com/WhileTrueThenDream/ExamplesCLinuxUserSpace/blob/master/sm_write.c  */
-int create_shm()
-{
-    int fd;
-    fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 00700);
-    if (fd == -1)
-    {
-        perror("Error al crear la shm");
-        exit(1);
-    }
-    if (-1 == ftruncate(fd, SHM_SIZE))
-    {
-        perror("Error al modificar el tamaño de la shm");
-        exit(1);
-    }
-    return fd;
-}
-
 FILE *create_result()
 {
     FILE *file;
@@ -308,4 +235,21 @@ void cleanBuffer(char *buffer)
     {
         buffer[j++] = 0;
     }
+}
+
+int sendTasks(int filesToSend, int slave, const char *argv[], int tIndex, int fd_write[SLAVES][2])
+{
+    char task[BUFFER_SIZE] = {'\0'};
+    if (filesToSend > 0)
+    {
+        strcpy(task, argv[tIndex]);
+        strcat(task, "\n");
+        if (write(fd_write[slave][STDOUT_FILENO], task, strlen(task)) < 0)
+        {
+            perror("Error al enviar la tarea");
+            exit(1);
+        }
+        return 1;
+    }
+    return 0;
 }

@@ -1,5 +1,4 @@
-Nombre: ../CNF/hole6.cnf Esclavo PID: 349 Number of variables: 42 Number of clauses: 133 CPU time : 0.006759 s UNSATISFIABLE
-Nombre: ../CNF/hole6.cnf Esclavo PID: 347 Number of variables: 42 Number of clauses: 133 CPU time : 0.007149 s UNSATISFIABLE
-Nombre: ../CNF/hole7.cnf Esclavo PID: 351 Number of variables: 56 Number of clauses: 204 CPU time : 0.073003 s UNSATISFIABLE
-Nombre: ../CNF/hole7.cnf Esclavo PID: 348 Number of variables: 56 Number of clauses: 204 CPU time : 0.073688 s UNSATISFIABLE
-Nombre: ../CNF/hole8.cnf Esclavo PID: 350 Number of variables: 72 Number of clauses: 297 CPU time : 0.36889 s UNSATISFIABLE
+Nombre: ../CNF/hole6.cnf Esclavo PID: 4458 Number of variables: 42 Number of clauses: 133 CPU time : 0.010608 s UNSATISFIABLE
+Nombre: ../CNF/hole7.cnf Esclavo PID: 4459 Number of variables: 56 Number of clauses: 204 CPU time : 0.062537 s UNSATISFIABLE
+Nombre: ../CNF/hole8.cnf Esclavo PID: 4460 Number of variables: 72 Number of clauses: 297 CPU time : 0.43292 s UNSATISFIABLE
+Nombre: ../CNF/hole9.cnf Esclavo PID: 4461 Number of variables: 90 Number of clauses: 415 CPU time : 6.52273 s UNSATISFIABLE
