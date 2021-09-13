@@ -4,29 +4,25 @@ ODIR = ./obj
 BDIR = ./bin
 SRCDIR = ./src
 
-all: master view slave
+all: $(BDIR)/master $(BDIR)/view $(BDIR)/slave
 
-master: folders master.o shmManager.o semManager.o 
+$(BDIR)/master: $(ODIR) $(BDIR) $(ODIR)/shmManager.o $(ODIR)/semManager.o $(ODIR)/master.o
 	gcc $(ODIR)/master.o $(ODIR)/semManager.o $(ODIR)/shmManager.o $(CFLAGS) -o $(BDIR)/master
-view: view.o shmManager.o semManager.o 
+
+$(BDIR)/view: $(ODIR)/view.o $(ODIR)/shmManager.o $(ODIR)/semManager.o 
 	gcc $(ODIR)/view.o $(ODIR)/semManager.o $(ODIR)/shmManager.o $(CFLAGS) -o $(BDIR)/view
-slave: slave.o 
+
+$(BDIR)/slave: $(ODIR)/slave.o 
 	gcc $(ODIR)/slave.o $(CFLAGS) -o $(BDIR)/slave
 
-folders:
+$(ODIR):
 	mkdir -p $(ODIR)
-	mkdir -p $(BDIR)
 
-master.o: 
-	gcc -c $(CFLAGS) $(SRCDIR)/master.c  -o $(ODIR)/master.o
-slave.o: 
-	gcc -c $(CFLAGS) $(SRCDIR)/slave.c -o $(ODIR)/slave.o
-view.o: 
-	gcc -c $(CFLAGS) $(SRCDIR)/view.c -o $(ODIR)/view.o
-semManager.o: 
-	gcc -c $(CFLAGS) $(SRCDIR)/shmManager.c -o $(ODIR)/shmManager.o
-shmManager.o: 
-	gcc -c $(CFLAGS) $(SRCDIR)/semManager.c -o $(ODIR)/semManager.o
+$(BDIR):
+	mkdir -p $(BDIR)	
+
+$(ODIR)/%.o : $(SRCDIR)/%.c
+	gcc -c $(CFLAGS) $< -o $@
 
 clean:
 	@rm -rf $(BDIR)

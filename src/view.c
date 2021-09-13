@@ -16,6 +16,11 @@ int main(int argc, char const *argv[])
             exit(1);
         }
         files = atoi(argv[1]);
+        if(files == 0)
+        {
+            perror("Argumento invalido");
+            exit(1);
+        }
     }
     else if (argc == 1)
     {
