@@ -1,7 +1,6 @@
-Trabajo Práctico №1: 
-“Inter Process Communication”
+#Trabajo Práctico N1: “Inter Process Communication”
 
-Instrucciones de compilación y ejecución
+#Instrucciones de compilación y ejecución
 Para la compilación, al comenzar hay que instalar el minisat con el comando apt-get install minisat. Luego, para compilar los archivos hay que ejecutar el comando make en la carpeta principal. 
 Para la ejecución se necesitan los archivos de extensión .cnf. Cabe destacar, que los archivos de extensión cnf deben ser agregados antes de ser ejecutados como es mencionado en la consigna. Para comenzar con la ejecución, primero hay que posicionarse en la carpeta bin donde se generan los ejecutables. Y luego hay dos formas de ejecución:
 Primera forma:
