@@ -177,12 +177,14 @@ void create_slaves(int fd_read[SLAVES][2], int fd_write[SLAVES][2], int *slaves_
                 perror("Error en el dup 1");
                 exit(1);
             }
+            close(fd_write[i][STDIN_FILENO]);
 
             if (dup2(fd_read[i][STDOUT_FILENO], STDOUT_FILENO) < 0)
             {
                 perror("Error en el dup 2");
                 exit(1);
             }
+            close(fd_read[i][STDOUT_FILENO]);
 
             char *const paths[] = {"./slave", NULL};
             if (execv(paths[0], paths) < 0)

@@ -11,6 +11,7 @@ int main()
 
     while ((i = read(STDIN_FILENO, buffer, sizeof(buffer))) != 0)
     {
+        sleep(5);
         int idx1 = 0;
         int idx2 = 0;
         char bufferAux[BUFFER_SIZE];
